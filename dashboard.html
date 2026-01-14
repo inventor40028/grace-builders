@@ -109,8 +109,15 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium mb-1">Category</label>
-        <input id="category" placeholder="e.g., Electrical, Plumbing" class="w-full p-3 border rounded">
+        <label class="block text-sm font-medium mb-1">Category *</label>
+        <select id="category" required class="w-full p-3 border rounded">
+          <option value="">-- Select Category --</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="electrical">Electricals</option>
+          <option value="decor">Decor</option>
+          <option value="building">Building</option>
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Choose which category this service belongs to</p>
       </div>
       
       <div class="md:col-span-2">
