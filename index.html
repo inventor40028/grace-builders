@@ -114,6 +114,25 @@
                 class="w-full py-4 px-6 rounded-full text-gray-800 shadow-xl focus:ring-4 focus:ring-blue-300 outline-none">
             <div class="absolute right-4 top-4 text-gray-400"><i class="fas fa-search text-xl"></i></div>
         </div>
+
+        <!-- Category Filter Buttons -->
+        <div class="mt-8 flex flex-wrap gap-3 justify-center reveal" style="transition-delay: 500ms">
+            <button onclick="toggleCategory('plumbing')" class="category-btn px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white dark:bg-slate-700 dark:text-gray-300" data-category="plumbing">
+                <i class="fas fa-water mr-2"></i>Plumbing
+            </button>
+            <button onclick="toggleCategory('electrical')" class="category-btn px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white dark:bg-slate-700 dark:text-gray-300" data-category="electrical">
+                <i class="fas fa-bolt mr-2"></i>Electricals
+            </button>
+            <button onclick="toggleCategory('decor')" class="category-btn px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white dark:bg-slate-700 dark:text-gray-300" data-category="decor">
+                <i class="fas fa-palette mr-2"></i>Decor
+            </button>
+            <button onclick="toggleCategory('building')" class="category-btn px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white dark:bg-slate-700 dark:text-gray-300" data-category="building">
+                <i class="fas fa-hammer mr-2"></i>Building
+            </button>
+            <button onclick="clearFilters()" class="category-btn px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-red-500 hover:text-white dark:bg-slate-700 dark:text-gray-300">
+                <i class="fas fa-times mr-2"></i>Clear
+            </button>
+        </div>
     </div>
 </header>
 
@@ -281,6 +300,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Category Mapping
+    const categoryMap = {
+        plumbing: ['plumbing'],
+        electrical: ['electrical'],
+        decor: ['decor'],
+        building: ['building']
+    };
+
+    let activeCategory = null;
+    let allServices = [];
+
     // Scroll Animation Observer
     const observerOptions = {
         threshold: 0.1,
@@ -304,22 +334,38 @@
         const grid = document.getElementById('servicesGrid');
         try {
             const snapshot = await db.collection('services').get();
-            const services = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            allServices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            if (services.length === 0) {
+            if (allServices.length === 0) {
                 grid.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400">No services available.</p>';
                 return;
             }
 
-            grid.innerHTML = services.map((s, index) => {
-                const hasImage = s.imageUrl && s.imageUrl.trim() !== '';
-                // Add stagger effect using inline style delay
-                const delay = (index % 4) * 100; 
-                
-                return `
+            renderServices(allServices);
+            refreshAnimations();
+
+        } catch(err) {
+            console.error(err);
+            grid.innerHTML = '<p class="text-center text-red-500">Failed to load services.</p>';
+        }
+    }
+
+    function renderServices(services) {
+        const grid = document.getElementById('servicesGrid');
+        
+        if (services.length === 0) {
+            grid.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 col-span-full">No services found.</p>';
+            return;
+        }
+
+        grid.innerHTML = services.map((s, index) => {
+            const hasImage = s.imageUrl && s.imageUrl.trim() !== '';
+            const delay = (index % 4) * 100; 
+            
+            return `
                 <div class="reveal service-card bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 cursor-pointer"
                      onclick="openInquiry('${s.name}', '${s.desc}')"
-                     data-name="${s.name.toLowerCase()}"
+                     data-name="${s.name.toLowerCase()}
                      style="transition-delay: ${delay}ms">
                     <div class="service-icon ${hasImage ? '' : 'bg-blue-100'} rounded-xl flex items-center justify-center mb-4">
                         ${hasImage ? 
@@ -335,25 +381,66 @@
                 </div>
             `}).join('');
 
-            // Re-run observer for new elements
-            refreshAnimations();
+        refreshAnimations();
+    }
 
-        } catch(err) {
-            console.error(err);
-            grid.innerHTML = '<p class="text-center text-red-500">Failed to load services.</p>';
+    function toggleCategory(category) {
+        const btns = document.querySelectorAll('.category-btn');
+        
+        if (activeCategory === category) {
+            activeCategory = null;
+            btns.forEach(b => b.classList.remove('bg-blue-500', 'text-white'));
+            btns.forEach(b => b.classList.add('bg-gray-200', 'text-gray-700'));
+            renderServices(allServices);
+        } else {
+            activeCategory = category;
+            btns.forEach(b => {
+                if (b.getAttribute('data-category') === category) {
+                    b.classList.add('bg-blue-500', 'text-white');
+                    b.classList.remove('bg-gray-200', 'text-gray-700');
+                } else {
+                    b.classList.remove('bg-blue-500', 'text-white');
+                    b.classList.add('bg-gray-200', 'text-gray-700');
+                }
+            });
+            
+            const filtered = allServices.filter(service => 
+                service.category && service.category.toLowerCase() === category
+            );
+            renderServices(filtered);
         }
+        document.getElementById('noResults').classList.add('hidden');
+    }
+
+    function clearFilters() {
+        activeCategory = null;
+        document.getElementById('serviceSearch').value = '';
+        document.querySelectorAll('.category-btn').forEach(b => {
+            b.classList.remove('bg-blue-500', 'text-white');
+            b.classList.add('bg-gray-200', 'text-gray-700');
+        });
+        renderServices(allServices);
+        document.getElementById('noResults').classList.add('hidden');
     }
 
     function filterServices() {
         const query = document.getElementById('serviceSearch').value.toLowerCase();
-        const cards = document.querySelectorAll('.service-card');
-        let found = false;
-        cards.forEach(card => {
-            const name = card.getAttribute('data-name');
-            if(name.includes(query)) { card.style.display='block'; found=true; } 
-            else { card.style.display='none'; }
-        });
-        document.getElementById('noResults').classList.toggle('hidden', found);
+        let filtered = activeCategory ? 
+            allServices.filter(s => s.category && s.category.toLowerCase() === activeCategory) :
+            allServices;
+        
+        filtered = filtered.filter(s => 
+            s.name.toLowerCase().includes(query) || 
+            (s.desc && s.desc.toLowerCase().includes(query))
+        );
+        
+        if (filtered.length === 0) {
+            document.getElementById('noResults').classList.remove('hidden');
+            document.getElementById('servicesGrid').innerHTML = '';
+        } else {
+            document.getElementById('noResults').classList.add('hidden');
+            renderServices(filtered);
+        }
     }
 
     function openInquiry(service, desc) {
