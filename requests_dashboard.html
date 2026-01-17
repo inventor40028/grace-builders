@@ -9,6 +9,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     
     <style>
         .request-card { transition: all 0.3s; }
@@ -274,14 +275,28 @@
     
     // Initialize Firebase
     let db;
+    let auth;
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        auth = firebase.auth();
         console.log('Firebase initialized successfully');
     } catch (error) {
         console.error('Firebase initialization error:', error);
         showError('Firebase Error', 'Failed to initialize Firebase. Check console for details.');
     }
+    
+    // ✅ AUTH CHECK
+    auth.onAuthStateChanged(user => {
+        if (!user) {
+            // Not logged in - redirect to login
+            window.location.href = "login.html";
+        } else {
+            // User is logged in - load requests
+            console.log('Admin authenticated:', user.email);
+            loadRequests();
+        }
+    });
     
     let allRequests = [];
     let unsubscribe = null;
